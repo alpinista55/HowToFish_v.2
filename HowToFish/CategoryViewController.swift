@@ -10,41 +10,51 @@ import UIKit
 import Realm
 import RealmSwift
 
-
-enum HeroTag: Int {
-    case Basics = 0, Hardware, Freshwater, Saltwater, FlyFishing
-}
-
-class CategoryViewController: UIViewController, NSURLSessionDelegate, NSURLSessionDataDelegate, NSURLSessionTaskDelegate{
+class CategoryViewController: UIViewController,
+    NSURLSessionDelegate,
+    NSURLSessionDataDelegate,
+    NSURLSessionTaskDelegate,
+    SWRevealViewControllerDelegate{
     
-    @IBOutlet weak var imageView: UIImageView!
-    var expectedContentLength = 0
-    var buffer:NSMutableData = NSMutableData()
-    var destinationURL: NSURL?
+    // Model
+    var categories: Results<MediaCategory>?
     var videos: Results<LocalMediaObject>?
-   // let realm = try! Realm()
     var collectionTitle: String?
+    var heroTag: String?
     
+    // UI
+    @IBOutlet weak var imageView: UIImageView! // Main in=mageview for slideshow images
     @IBOutlet weak var menuButton: UIBarButtonItem!
     @IBOutlet weak var progressBar: UIProgressView!
     
-    //slideshow
+    // Slideshow
     var images = Array<UIImage>()
     var slideshowTimer: NSTimer?
-    var slideCounter = 0;
+    var slideCounter = 1;
+    
+    // SWReveal
+    var buttonsEnabled: Bool = true
 
+    // MARK: - LifeCycle -
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = "PFG: HOW TO FISH"
         
+        // Config for SWReveal controller
         if self.revealViewController() != nil {
             menuButton.target = self.revealViewController()
             menuButton.action = "revealToggle:"
             self.view.addGestureRecognizer(self.revealViewController().panGestureRecognizer())
+            
         }
         
         loadImages()
+        categories = ModelBuilder.sharedInstance.getCategories()
+        
+        if Reachability.isConnectedToNetwork() == false {
+            showNoInternetAlert()
+        }
 
     }
     
@@ -52,6 +62,10 @@ class CategoryViewController: UIViewController, NSURLSessionDelegate, NSURLSessi
         super.viewWillAppear(true)
         self.title = "PFG: HOW TO FISH"
         startSlideShow()
+        
+        if self.revealViewController() != nil {
+            self.revealViewController().delegate = self
+        }
     }
     
     override func viewDidDisappear(animated: Bool) {
@@ -64,40 +78,30 @@ class CategoryViewController: UIViewController, NSURLSessionDelegate, NSURLSessi
         // Dispose of any resources that can be recreated.
     }
     
-    @IBAction func handleButtonTap(sender: AnyObject) {
-
-        switch sender.tag {
-        case HeroTag.Basics.rawValue:
-            collectionTitle = "Fishing Basics"
-            fetchMediaForTag(collectionTitle!)
-        case HeroTag.Hardware.rawValue:
-            collectionTitle = "Tackle"
-            fetchMediaForTag(collectionTitle!)
-        case HeroTag.Saltwater.rawValue:
-            collectionTitle = "Saltwater Fishing"
-            fetchMediaForTag(collectionTitle!)
-        case HeroTag.Freshwater.rawValue:
-            collectionTitle = "Freshwater Fishing"
-            fetchMediaForTag(collectionTitle!)
-        case HeroTag.FlyFishing.rawValue:
-            collectionTitle = "Fly Fishing"
-            fetchMediaForTag(collectionTitle!)
-        default:
-            return
-        }
-        
-        print("Video count = \(videos?.count)")
-        if videos?.count > 0 {
-            performSegueWithIdentifier("presentVideoCollection", sender: self)
-        }
+    
+    deinit {
         
     }
     
-    func fetchMediaForTag(hero: String) {
-        print("Fetching videos for tag \(hero)")
-        let realm = try! Realm()
-        videos = realm.objects(LocalMediaObject).filter("heroTag = '\(hero)'").sorted("title", ascending: true)
-
+    // MARK: - Button Tap Handler -
+    
+    @IBAction func handleButtonTap(sender: AnyObject) {
+        
+        guard buttonsEnabled else {
+            return
+        }
+        
+        // Use the button tag value to get the media category
+        if let category: MediaCategory = categories![sender.tag]  {
+            videos = ModelBuilder.sharedInstance.getMediaObjectsForCategory(category)
+            collectionTitle = category.displayName
+            
+            guard videos?.count > 0 else {
+                return
+            }
+            
+            performSegueWithIdentifier("presentVideoCollection", sender: self)
+        }
     }
     
     // MARK: - Slideshow
@@ -130,13 +134,9 @@ class CategoryViewController: UIViewController, NSURLSessionDelegate, NSURLSessi
     
     func advanceSlideShow() {
         
-       
-        
         if slideCounter == self.images.count {
             slideCounter = 0
         }
-        
-         print("count = \(slideCounter)")
         
         let nextImage:UIImage = self.images[slideCounter]
         
@@ -158,6 +158,34 @@ class CategoryViewController: UIViewController, NSURLSessionDelegate, NSURLSessi
             controller.collectionTitle = self.collectionTitle?.uppercaseString
             
             
+        }
+    }
+    
+    @IBAction func unwindToCategoryView(segue: UIStoryboardSegue) {
+        print("unwindToCategoryView")
+    }
+    
+    // MARK: - Alert -
+    
+    func showNoInternetAlert() {
+        
+        let message = "This app requires an internet connection for some functions"
+        let alertView: UIAlertController = UIAlertController(title: "NO INTERNET CONNECTION",
+            message:  message,
+            preferredStyle: UIAlertControllerStyle.Alert)
+        
+        alertView.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
+        self.presentViewController(alertView, animated: true, completion: nil)
+        
+    }
+    
+    func revealController(revealController: SWRevealViewController!, didMoveToPosition position: FrontViewPosition) {
+        if position == FrontViewPosition.Right {
+            print("Right")
+            self.buttonsEnabled = false
+        } else {
+            print("Left")
+            self.buttonsEnabled = true
         }
     }
     

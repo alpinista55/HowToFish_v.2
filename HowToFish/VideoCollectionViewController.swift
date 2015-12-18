@@ -13,22 +13,31 @@ import MessageUI
 
 let reuseIdentifier = "videoCollectionCell"
 
-class VideoCollectionViewController: UICollectionViewController, UIGestureRecognizerDelegate, UIPopoverPresentationControllerDelegate {
+class VideoCollectionViewController: UICollectionViewController,
+    UIGestureRecognizerDelegate,
+    UIPopoverPresentationControllerDelegate,
+    SWRevealViewControllerDelegate {
     
+    // Model
     var collectionTitle: String?
     var videos: Results<LocalMediaObject>!
     var selectedMediaObject: LocalMediaObject?
     
+    // UI
     @IBOutlet weak var menuButton: UIBarButtonItem!
     @IBOutlet weak var homeButton: UIBarButtonItem!
+    
+    // MARK: - LifeCycle -
     
     override func viewDidLoad() {
         self.title = collectionTitle!.uppercaseString
         
+        // Config SWRevealViewController
         if self.revealViewController() != nil {
             menuButton.target = self.revealViewController()
             menuButton.action = "revealToggle:"
             self.view.addGestureRecognizer(self.revealViewController().panGestureRecognizer())
+            self.revealViewController().delegate = self
         }
 
         
@@ -43,18 +52,23 @@ class VideoCollectionViewController: UICollectionViewController, UIGestureRecogn
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "videoOptionsChanged:", name: "kVideoOptionsDidChange", object: nil)
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "shareVideo:", name: "kUserDidSelectShare", object: nil)
         
+        // Listen for return from background, so that we reload the collectionView in case recent videos were deleted
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "reloadDataAfterReturnFromBackground", name: "kApplicationDidBecomeActive", object: nil)
+        
     }
     
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(true)
         
-        // Reload the collectionView when returning from the MediaPlayer to reflect the recentDOwnload state change
+        // Reload the collectionView when returning from the MediaPlayer to reflect the recentDownload state change
         self.collectionView?.reloadData()
     }
     
     deinit {
         NSNotificationCenter.defaultCenter().removeObserver(self)
     }
+    
+    // MARK: - CollectionView DataSource -
     
     override func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
         return 1
@@ -101,15 +115,43 @@ class VideoCollectionViewController: UICollectionViewController, UIGestureRecogn
 
     }
     
+    func reloadDataAfterReturnFromBackground() {
+        collectionView?.reloadData()
+    }
+    
+    // MARK: - CollectionView Delegate -
+    
     override func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
         selectedMediaObject = videos[indexPath.row]
+        
+        // Check for network availability if media is not local
+        guard selectedMediaObject!.isRecent || selectedMediaObject!.isFavorite else {
+            
+            guard Reachability.isConnectedToNetwork() else {
+                let message = "Please connect to the internet before downloading new videos."
+                showAlertViewWithMessage(message)
+                return
+            }
+            
+            // Perform segue results in video being downloaded and played
+            performSegueWithIdentifier("presentVideoPlayer", sender: self)
+            return
+        }
+        
+        // Perform segue results in local media being played
         performSegueWithIdentifier("presentVideoPlayer", sender: self)
     }
     
+    // Resize the collectionViewCell width for different screen widths in iPhone
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
-        var cellWidth = collectionView.frame.width/2
-        cellWidth -= 30
-        return CGSize(width: cellWidth, height: cellWidth * 0.7)
+        
+        let totalHorizontalPadding = CGFloat(30.0)
+        let ratio = CGFloat(9.0/16.0)
+        let titleLabelHeight = CGFloat(30.0)
+        let cellWidth = collectionView.frame.width/2 - totalHorizontalPadding/2
+        let cellHeight = cellWidth * ratio + titleLabelHeight
+
+        return CGSize(width: cellWidth, height: cellHeight)
     }
     
     // MARK: - Long Press Gesture Handling -
@@ -129,47 +171,7 @@ class VideoCollectionViewController: UICollectionViewController, UIGestureRecogn
         
     }
     
-//    func showOptionsForMediaObject(lmo: LocalMediaObject) {
-//        
-//        // Create the OptionsVC
-//        let storyboard = UIStoryboard(name: "Main_iPhone", bundle: nil)
-//        let vc = storyboard.instantiateViewControllerWithIdentifier("optionsViewController") as! OptionsViewController
-//        vc.lmo = lmo
-//        vc.parentVC = parentVC!
-//        parentVC!.optionsVC = vc
-//        
-//        
-//        // create blocking view
-//        parentVC!.blockingView = UIView(frame: parentVC!.view.bounds)
-//        parentVC!.blockingView!.backgroundColor = UIColor(red: 0.10, green: 0.1, blue: 0.1, alpha: 0.5)
-//        parentVC!.view.addSubview(parentVC!.blockingView!);
-//        
-//        // Add gesture recognixzr to blocking view targeting the OptionsVC
-//        let tapRecognizer = UITapGestureRecognizer(target: parentVC!.optionsVC!, action: "dismissOptionsVC:")
-//        parentVC!.blockingView!.addGestureRecognizer(tapRecognizer)
-//        
-//        // Add child and its view to parent
-//        parentVC!.addChildViewController(parentVC!.optionsVC!)
-//        parentVC!.view.addSubview(parentVC!.optionsVC!.view)
-//        parentVC!.optionsVC!.didMoveToParentViewController(parentVC!)
-//        
-//        // Position the view offscreen and animate it to final position centered in parent view
-//        let parentFrame = parentVC!.view.bounds
-//        var startFrame = parentFrame
-//        
-//        startFrame.origin.y = parentFrame.size.height
-//        startFrame.size.width = 300
-//        startFrame.size.height = 310
-//        startFrame.origin.x = (parentVC!.view.bounds.size.width - startFrame.size.width) / 2
-//        parentVC!.optionsVC!.view.frame = startFrame
-//        
-//        var endFrame = startFrame
-//        endFrame.origin.y = (parentFrame.size.height - endFrame.size.height) / 2
-//        
-//        UIView.animateWithDuration(0.25) { () -> Void in
-//            self.parentVC!.optionsVC!.view.frame = endFrame
-//        }
-//    }
+    // MARK: - Options Popover -
     
     func showOptionsForMediaObject(lmo: LocalMediaObject, origin: CGPoint) {
         
@@ -243,10 +245,6 @@ class VideoCollectionViewController: UICollectionViewController, UIGestureRecogn
         
     }
     
-    func showMenu() {
-        
-    }
-    
     //Mark Segue Navigation
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
@@ -262,11 +260,27 @@ class VideoCollectionViewController: UICollectionViewController, UIGestureRecogn
         print("unwindToCollectionView")
     }
     
-    @IBAction func goHome(sender: AnyObject) {
-        self.navigationController?.popToRootViewControllerAnimated(true)
-    }
-    
     override func shouldAutorotate() -> Bool {
         return false
+    }
+    
+    func showAlertViewWithMessage(message: String) {
+        let alertView: UIAlertController = UIAlertController(title: "ERROR",
+            message: message,
+            preferredStyle: UIAlertControllerStyle.Alert)
+        
+        alertView.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
+        self.presentViewController(alertView, animated: true, completion: nil)
+        
+    }
+    
+    func revealController(revealController: SWRevealViewController!, didMoveToPosition position: FrontViewPosition) {
+        if position == FrontViewPosition.Right {
+            print("Right")
+            self.collectionView?.userInteractionEnabled = false
+        } else {
+            print("Left")
+            self.collectionView?.userInteractionEnabled = true
+        }
     }
 }

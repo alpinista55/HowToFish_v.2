@@ -46,9 +46,9 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
     var destinationURL: NSURL?
     var progressHUD: MBProgressHUD?
     var videoDownloadSession: NSURLSession?
-    var coverView: UIImageView?
+
     
-    private var myContext = 0
+    private var myContext = 0 // Context for KVO: AVPlayerViewController.observeValueForKeyPath
     
     
     // MARK: - Life Cycle -
@@ -61,18 +61,15 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
         
         self.showsPlaybackControls = false
         
-        // iPad cover view
-        if UIDevice.currentDevice().userInterfaceIdiom == .Pad {
-            coverView = UIImageView(frame: CGRectMake(0.0, 0.0, 1024.0, 576.0))
-            coverView!.image = UIImage(named: "SelectAVideoBelow")
-            coverView!.userInteractionEnabled = false
-            self.view.addSubview(coverView!)
-        }
-        
         // If there is a url for the selected media then load it
         if let mediaURL = urlForMedia() {
             loadVideoAsync(mediaURL)
         }
+    }
+    
+    override func viewDidAppear(animated: Bool) {
+        super.viewDidAppear(true)
+        print("frame w: \(view.frame.size.width), h: \(view.frame.size.height)")
     }
     
     override func viewDidDisappear(animated: Bool) {
@@ -118,7 +115,7 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
     }
 
     
-    // Checks for local media, and downloads the video to the device if file not found
+    // Checks for and plays local media, or downloads the video to the device if file not found, and then plays video
     func loadVideoAsync(url: NSURL) -> Void {
         let documentsUrl =  NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL!
         if let tempURL = documentsUrl.URLByAppendingPathComponent(url.lastPathComponent!) as NSURL!{
@@ -129,13 +126,6 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
                 playVideo()
             }
             else {
-                
-                // Check for network availability
-                guard Reachability.isConnectedToNetwork() else {
-                    let message = "Please connect to the internet before downloading new videos."
-                    showAlertViewWithMessage(message)
-                    return
-                }
                 
                 setupSession()
                 let request = NSMutableURLRequest(URL: url)
@@ -275,6 +265,7 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
             
             self.view.layer.addSublayer(playerLayer!)
             self.showsPlaybackControls = true // Call this here to avoid autoLayout warnings from the playback control view
+            self.allowsPictureInPicturePlayback = false
             
             // Register for notification of video reaching the end
             NSNotificationCenter.defaultCenter().addObserver(self, selector: "videoPlaybackComplete:", name: AVPlayerItemDidPlayToEndTimeNotification, object: nil)
@@ -292,40 +283,20 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
         }
     }
     
-    // MARK: - CoverView for iPad
+    // MARK: - KVO for AVPlayerStatus
     
     // Hide the coverView when the video status changes to ReadyToPlay
     override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
         if context == &myContext {
             if keyPath == "status" {
                 if player!.status == AVPlayerStatus.ReadyToPlay {
-                    //print("Ready to play")
-                    hideCoverView()
+                    print("Ready to play")
                 }
             }
         } else {
             super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context)
         }
         
-    }
-    
-    func showCoverView() {
-        if let cv = coverView {
-            if player!.status == AVPlayerStatus.ReadyToPlay {
-                //print("Ready to play")
-            }
-            UIView.animateWithDuration(0.25, animations: { () -> Void in
-                cv.alpha = 1.0
-            })
-        }
-    }
-    
-    func hideCoverView() {
-        if let cv = coverView {
-            UIView.animateWithDuration(0.25, animations: { () -> Void in
-                cv.alpha = 0.0
-            })
-        }
     }
     
     // MARK: - Clean Up Methods -
@@ -347,12 +318,12 @@ class MediaPlayerViewController: AVPlayerViewController, NSURLSessionDelegate, N
     func removePlayer() {
         if player != nil {
             player!.pause()
-            showCoverView()
             player!.removeObserver(self, forKeyPath: "status")
             playerLayer!.removeFromSuperlayer()
             playerLayer = nil
             player = nil
             print("Player is nil")
+            NSNotificationCenter.defaultCenter().postNotificationName("kVideoDidPlayToEnd", object: nil)
         }
     }
     

@@ -12,7 +12,11 @@ import SafariServices
 
 class MenuTableViewController: UITableViewController {
     
-    let realm = try! Realm()
+    let categories = ModelBuilder.sharedInstance.getCategories()
+    
+    // NOTE: TableView is a static layout in IB Storyboard
+    
+    // MARK: - TableView Delegate -
     
     override func tableView(tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 10
@@ -26,36 +30,25 @@ class MenuTableViewController: UITableViewController {
         let categoriesVC: CategoryViewController = storyboard!.instantiateViewControllerWithIdentifier("categoryViewController") as! CategoryViewController
         let collectionVC: VideoCollectionViewController = storyboard!.instantiateViewControllerWithIdentifier("collectionViewController") as! VideoCollectionViewController
         
+        // Section 0 is Favorites and Recent
         if indexPath.section == 0 {
             if indexPath.row == 0 {
                 collectionVC.collectionTitle = "Favorites"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("isFavorite = true").sorted("dateAdded", ascending: false)
+                collectionVC.videos = ModelBuilder.sharedInstance.getFavorites()
                 
             } else {
                 collectionVC.collectionTitle = "Recent"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("isRecent = true").sorted("dateAdded", ascending: false)
+                collectionVC.videos = ModelBuilder.sharedInstance.getRecent()
             }
+            
+        // Section 1 is Categories
         } else if indexPath.section == 1 {
             
-            switch indexPath.row {
-            case 0:
-                collectionVC.collectionTitle = "Fishing Basics"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("heroTag = 'Fishing Basics'").sorted("title", ascending: true)
-            case 1:
-                collectionVC.collectionTitle = "Fishing Hardware"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("heroTag = 'Tackle'").sorted("title", ascending: true)
-            case 2:
-                collectionVC.collectionTitle = "Freshwater Fishing"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("heroTag = 'Freshwater Fishing'").sorted("title", ascending: true)
-            case 3:
-                collectionVC.collectionTitle = "Saltwater Fishing"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("heroTag = 'Saltwater Fishing'").sorted("title", ascending: true)
-            case 4:
-                collectionVC.collectionTitle = "Fly Fishing"
-                collectionVC.videos = realm.objects(LocalMediaObject).filter("heroTag = 'Fly Fishing'").sorted("title", ascending: true)
-            default:
-                return
-            }
+            let category = categories[indexPath.row]
+            collectionVC.collectionTitle = category.displayName
+            collectionVC.videos = ModelBuilder.sharedInstance.getMediaObjectsForCategory(category)
+            
+        // Section 2 is Settings, About and Shop PFG
         } else {
             switch indexPath.row {
             case 0:
@@ -69,11 +62,8 @@ class MenuTableViewController: UITableViewController {
                 revealViewController().setFrontViewPosition(FrontViewPosition.Left, animated: true)
                 return
             case 2:
-                //let shopPFGVC: ShopPFGViewController = storyboard!.instantiateViewControllerWithIdentifier("shopPFGViewController") as! ShopPFGViewController
-                //let shopPFGVC = SFSafariViewController(URL: NSURL(string: "http://columbia.com/pfg")!)
-                //shopPFGVC.navigationItem.title = "Shop Columbia PFG"
                 navController.setViewControllers([categoriesVC], animated: false)
-                NSNotificationCenter.defaultCenter().postNotificationName("kUserDidSelectShopPFG", object: nil)
+                NSNotificationCenter.defaultCenter().postNotificationName("kUserDidSelectShopPFG", object: nil) // Notification handled by NavigationController
                 revealViewController().setFrontViewPosition(FrontViewPosition.Left, animated: true)
                 return
 

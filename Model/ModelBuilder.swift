@@ -11,6 +11,7 @@ import RealmSwift
 
 class ModelBuilder: Object, NSURLSessionDelegate, NSURLSessionDownloadDelegate {
     
+    
     static let sharedInstance = ModelBuilder()
     
     func buildLocalDatabase() {
@@ -130,7 +131,7 @@ class ModelBuilder: Object, NSURLSessionDelegate, NSURLSessionDownloadDelegate {
             "CategoryThumb_FLYFISHING_iPad"
         ]
         
-        let displayNames = ["Basics", "Hardware", "Freshwater", "Saltwater", "Fly Fishing"]
+        let displayNames = ["Fishing Basics", "Hardware", "Freshwater Fishing", "Saltwater Fishing", "Fly Fishing"]
         
         let heroTags = ["Fishing Basics", "Tackle", "Freshwater Fishing", "Saltwater Fishing", "Fly Fishing"]
         
@@ -147,18 +148,89 @@ class ModelBuilder: Object, NSURLSessionDelegate, NSURLSessionDownloadDelegate {
                 realm.add(myCategory)
             }
         }
+    }
+    
+    // MARK: - Realm Queries -
+    
+    func getCategories() -> Results<MediaCategory> {
+        let realm = try! Realm()
+        let categories = realm.objects(MediaCategory).sorted("id")
+        return categories
+    }
+    
+    func getMediaObjectsForCategory(category: MediaCategory) -> Results<LocalMediaObject>{
+        let realm = try! Realm()
+        let mediaObjects = realm.objects(LocalMediaObject).filter("heroTag = '\(category.heroTag!)'").sorted("title", ascending: true)
+        return mediaObjects
+    }
+    
+    func getFavorites() -> Results<LocalMediaObject>{
+        let realm = try! Realm()
+        let mediaObjects = realm.objects(LocalMediaObject).filter("isFavorite = true").sorted("title", ascending: true)
+        return mediaObjects
+    }
+    
+    func getRecent() -> Results<LocalMediaObject>{
+        let realm = try! Realm()
+        let mediaObjects = realm.objects(LocalMediaObject).filter("isRecent = true").sorted("title", ascending: true)
+        return mediaObjects
+    }
+    
+    func deleteMediaFromRecentIfNecessary() {
         
+        // Get Recently viewed media
+        let realm = try! Realm()
+        let recents = realm.objects(LocalMediaObject).filter("isRecent = true").sorted("dateAdded")
+        
+        // CacheLimit is set in the settingsView
+        let cacheLimit = NSUserDefaults.standardUserDefaults().floatForKey("kCacheLimit")
+        
+        var mediaObjectsToRemove = Array<LocalMediaObject>()
+        
+        // If cache limit exceeded, add earliest to temp array
+        if recents.count > Int(cacheLimit) {
+            let delta = recents.count - Int(cacheLimit)
+            
+            for var i = 0; i < delta; i++ {
+                print("Removing lmo at index \(i), added at: \(recents[i].dateAdded), title: \(recents[i].title)")
+                mediaObjectsToRemove.append(recents[i])
+            }
+            
+            removeMediaFromRecents(mediaObjectsToRemove)
+        }
+    }
+    
+    func removeMediaFromRecents(mediaObjects: Array<LocalMediaObject>) {
+        let realm = try! Realm()
+        try! realm.write() {
+            for media in mediaObjects {
+                media.isRecent = false
+                if media.isFavorite == false {
+                    let path: String = media.isHD ? media.mediaURL720p! : media.mediaURL!
+                    self.deleteMediaAtPath(path)
+                }
+            }
+        }
+    }
+    
+    func deleteMediaAtPath(path: String) {
+        let documentsUrl =  NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL!
+        if let url: NSURL = NSURL(string: path) {
+            let fileURL = documentsUrl.URLByAppendingPathComponent(url.lastPathComponent!)
+            if NSFileManager().fileExistsAtPath(fileURL.path!) {
+                do {
+                    try NSFileManager().removeItemAtPath(fileURL.path!)
+                }
+                    
+                catch let error as NSError {
+                    print(error.localizedDescription)
+                }
+            }
+        }
     }
     
     func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
         print("Downloaded item")
-//        let documentsUrl =  NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL!
-//        let docURL = documentsUrl.URLByAppendingPathComponent("thumbnails/")
-//        do {
-//            try NSFileManager.defaultManager().moveItemAtURL(location, toURL: docURL)
-//        } catch let error as NSError {
-//            print("error moving file: \(error)")
-//        }
         
     }
 }

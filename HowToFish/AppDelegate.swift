@@ -7,6 +7,9 @@
 //
 
 import UIKit
+import Fabric
+import Crashlytics
+
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,13 +18,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        Fabric.with([Crashlytics.self])
+
         configureParse()
         checkForLocalDatabase()
-        checkForInternetConnection()
         
         //Set Apperance
-        UIApplication.sharedApplication().setStatusBarStyle(UIStatusBarStyle.LightContent, animated: false)
         UINavigationBar.appearance().tintColor = UIColor.whiteColor()
         UINavigationBar.appearance().barTintColor = CSC_Colors.csc_blue //UIColor(colorLiteralRed: 0.0, green: 136.0/255.0, blue: 206.0/255.0, alpha: 1.0)
         UINavigationBar.appearance().barStyle = .Black
@@ -42,8 +45,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillResignActive(application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
+        
+        ModelBuilder.sharedInstance.deleteMediaFromRecentIfNecessary()
     }
 
     func applicationDidEnterBackground(application: UIApplication) {
@@ -56,7 +59,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        
+        NSNotificationCenter.defaultCenter().postNotificationName("kApplicationDidBecomeActive", object: nil)
     }
 
     func applicationWillTerminate(application: UIApplication) {
@@ -161,14 +165,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Helper methods -
     
     func hasLauncedOnce() -> Bool {
-        if NSUserDefaults.standardUserDefaults().boolForKey("HasLaunchedOnce") {
+        let userDefaults = NSUserDefaults.standardUserDefaults()
+        if userDefaults.boolForKey("HasLaunchedOnce") {
             print("Has launched once")
             return true
         } else {
             // This is the first launch ever
             print("First launch")
-            NSUserDefaults.standardUserDefaults().setBool(true, forKey: "HasLaunchedOnce")
-            NSUserDefaults.standardUserDefaults().synchronize()
+            userDefaults.setBool(true, forKey: "HasLaunchedOnce")
+            userDefaults.setInteger(10, forKey: "kCacheLimit")
+            userDefaults.synchronize()
             return false
         }
     }
@@ -197,6 +203,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("Internet Connection OK")
     }
     
-    
-    }
+}
 

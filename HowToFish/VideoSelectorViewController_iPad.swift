@@ -11,10 +11,10 @@ import RealmSwift
 import SafariServices
 
 class VideoSelectorViewController_iPad: UIViewController,
-UICollectionViewDataSource,
-UICollectionViewDelegate,
-UIGestureRecognizerDelegate,
-SFSafariViewControllerDelegate {
+    UICollectionViewDataSource,
+    UICollectionViewDelegate,
+    UIGestureRecognizerDelegate,
+    SFSafariViewControllerDelegate {
     
     //UI
     @IBOutlet weak var titleLabel: UILabel!
@@ -30,6 +30,7 @@ SFSafariViewControllerDelegate {
     
     var buttons = [UIButton]()
     
+    @IBOutlet weak var backgroundImageView: UIImageView!
     
     @IBOutlet weak var favAndRecentsMessageLable: UILabel!
     @IBOutlet weak var videoPlayerContainerView: UIView!
@@ -39,8 +40,11 @@ SFSafariViewControllerDelegate {
     var categories: Results<MediaCategory>?
     var videos: Results<LocalMediaObject>?
     var selectedCategory: Int?
+    var selectedMediaObject: LocalMediaObject?
     
     var mediaPlayerVC: MediaPlayerViewController?
+    
+    // MARK: - LifeCycle -
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,7 +54,8 @@ SFSafariViewControllerDelegate {
         buttons = [basicsButton, hardwareButton, freshwaterButton, saltwaterButton, flyfishingButton, favoritesButton, recentsButton]
         let category = categories![selectedCategory!]
         setSelectedButton(selectedCategory!)
-        getVideosForCategory(category)
+        videos = ModelBuilder.sharedInstance.getMediaObjectsForCategory(category)
+
         collectionView.allowsMultipleSelection = false
         mediaPlayerVC = self.childViewControllers.last as? MediaPlayerViewController
         
@@ -61,10 +66,12 @@ SFSafariViewControllerDelegate {
         lpgr.delaysTouchesBegan = true
         self.collectionView?.addGestureRecognizer(lpgr)
         
-        // Listen for changes made in the OptionsViewController so we can reload the collectionView
+        // Listen for changes made in the OptionsViewController  and MenuViewControllerso we can reload the collectionView
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "videoOptionsChanged:", name: "kVideoOptionsDidChange", object: nil)
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "shareVideo:", name: "kUserDidSelectShare", object: nil)
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "settingsChanged:", name: "kUserDidChangeSettings", object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "showBackgroundImageview", name: "kVideoDidPlayToEnd", object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "reloadDataAfterReturnFromBackground", name: "kApplicationDidBecomeActive", object: nil)
     }
     
     override func viewDidDisappear(animated: Bool) {
@@ -72,27 +79,8 @@ SFSafariViewControllerDelegate {
 
     }
     
-    func getVideosForCategory(category: MediaCategory) {
-        let realm = try! Realm()
-        videos = realm.objects(LocalMediaObject).filter("heroTag = '\(category.heroTag!)'").sorted("title", ascending: true)
-    }
-    
-    func getFavorites() {
-        let realm = try! Realm()
-        videos = realm.objects(LocalMediaObject).filter("isFavorite = true").sorted("title", ascending: true)
-        if videos!.count == 0 {
-            favAndRecentsMessageLable.text = "No videos in your favorites.\nTap and hold on a video thumbnail to show the Options panel."
-            favAndRecentsMessageLable.hidden = false
-        }
-    }
-    
-    func getRecent() {
-        let realm = try! Realm()
-        videos = realm.objects(LocalMediaObject).filter("isRecent = true").sorted("title", ascending: true)
-        if videos!.count == 0 {
-            favAndRecentsMessageLable.text = "No videos have been downloaded"
-            favAndRecentsMessageLable.hidden = false
-        }
+    override func prefersStatusBarHidden() -> Bool {
+        return true;
     }
     
     // MARK: - CollectionView DataSource -
@@ -140,28 +128,58 @@ SFSafariViewControllerDelegate {
         return cell
     }
     
+    func reloadDataAfterReturnFromBackground() {
+        collectionView?.reloadData()
+    }
+    
+    // MARK: - CollectionView Delegate Methods -
+    
     func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
         
-        let lmoSelected = videos![indexPath.item]
+        selectedMediaObject = videos![indexPath.item]
         
+        // Check for local media and present if local
+        guard selectedMediaObject!.isRecent || selectedMediaObject!.isFavorite else {
+            
+            // Check for network availability and present if internet is available
+            guard Reachability.isConnectedToNetwork() else {
+                let message = "Please connect to the internet before downloading new videos."
+                showAlertViewWithMessage(message)
+                return
+            }
+            
+            presentVideoForIndexPath(indexPath)
+            return
+        }
+        
+        presentVideoForIndexPath(indexPath)
+    }
+    
+    func presentVideoForIndexPath(indexPath: NSIndexPath) {
         let cells = collectionView.visibleCells()
         
+        // Reset all cell appearence
         for var index = 0; index < cells.count; index++ {
             let cell = cells[index] as! VideoCollectionViewCell
             cell.backgroundColor = UIColor.whiteColor()
             cell.titleLabel.textColor = CSC_Colors.csc_blue
         }
         
+        // Set up the selected cells appearence and the NAvigationBar title
         let cell: VideoCollectionViewCell = collectionView.cellForItemAtIndexPath(indexPath) as! VideoCollectionViewCell
         cell.backgroundColor = CSC_Colors.csc_blue
         cell.titleLabel.textColor = UIColor.whiteColor()
-        let titleString = lmoSelected.title! + " with " + videos![indexPath.item].spokesPerson!
+        let titleString = selectedMediaObject!.title! + " with " + videos![indexPath.item].spokesPerson!
         navigationItem.title = titleString.uppercaseString
-        mediaPlayerVC!.mediaObj = lmoSelected
         
-        print("path = \(lmoSelected.mediaURL)")
+        // Give the selected media object to the player and play
+        mediaPlayerVC!.mediaObj = selectedMediaObject!
         mediaPlayerVC!.playMedia()
         
+        UIView.animateWithDuration(0.25) { () -> Void in
+            self.backgroundImageView.alpha = 0.0
+        }
+
     }
     
     // Builds the filePath for the thumbnail images
@@ -173,11 +191,7 @@ SFSafariViewControllerDelegate {
         
     }
     
-    // MARK: - Button Handler -
-    
-    @IBAction func goHome(sender: AnyObject) {
-        dismissViewControllerAnimated(true, completion: nil)
-    }
+    // MARK: - Category Button Handler -
     
     @IBAction func handleButtonTap(sender: AnyObject) {
         
@@ -191,11 +205,19 @@ SFSafariViewControllerDelegate {
         switch button.tag  {
         case 0, 1, 2, 3, 4:
             let category = categories![button.tag]
-            getVideosForCategory(category)
+            videos = ModelBuilder.sharedInstance.getMediaObjectsForCategory(category)
         case 5:
-            getFavorites()
+            videos = ModelBuilder.sharedInstance.getFavorites()
+            if videos!.count == 0 {
+                favAndRecentsMessageLable.text = "No videos in your favorites.\nTap and hold on a video thumbnail to show the Options panel."
+                favAndRecentsMessageLable.hidden = false
+            }
         case 6:
-            getRecent()
+            videos = ModelBuilder.sharedInstance.getRecent()
+            if videos!.count == 0 {
+                favAndRecentsMessageLable.text = "No videos have been downloaded"
+                favAndRecentsMessageLable.hidden = false
+            }
         default:
             return
         }
@@ -211,10 +233,6 @@ SFSafariViewControllerDelegate {
         
         buttons[index].enabled = false
         buttons[index].backgroundColor = UIColor.whiteColor()
-    }
-    
-    override func prefersStatusBarHidden() -> Bool {
-        return true;
     }
     
     // MARK: - Long Press Gesture Handling -
@@ -233,6 +251,8 @@ SFSafariViewControllerDelegate {
         }
         
     }
+    
+    // MARK: - Options Popover -
     
     func showOptionsForMediaObject(lmo: LocalMediaObject, origin: CGPoint) {
         
@@ -306,7 +326,25 @@ SFSafariViewControllerDelegate {
         
     }
     
-    func showMenu() {
+    func showBackgroundImageview() {
+        UIView.animateWithDuration(0.25) { () -> Void in
+            self.backgroundImageView.alpha = 1.0
+        }
+    }
+    
+    // MARK: - Alert View -
+    
+    func showAlertViewWithMessage(message: String) {
+        let alertView: UIAlertController = UIAlertController(title: "ERROR",
+            message: message,
+            preferredStyle: UIAlertControllerStyle.Alert)
+        
+        alertView.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
+        self.presentViewController(alertView, animated: true, completion: nil)
+        
+        if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
+            self.performSegueWithIdentifier("unwindToCollectionView", sender: self)
+        }
         
     }
 

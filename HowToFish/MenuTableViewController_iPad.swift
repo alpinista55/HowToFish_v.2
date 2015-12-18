@@ -8,7 +8,7 @@
 
 import Foundation
 
-class MenuViewController_iPad: UITableViewController {
+class MenuTableViewController_iPad: UITableViewController {
     
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         
@@ -29,11 +29,4 @@ class MenuViewController_iPad: UITableViewController {
             })
         }
     }
-    
-//    override func tableView(tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-//        let headerView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 10.0, height: tableView.bounds.width))
-//        headerView.backgroundColor = UIColor.lightGrayColor()
-//        return nil
-//    }
-    
 }

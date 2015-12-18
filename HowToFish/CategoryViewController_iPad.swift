@@ -35,7 +35,9 @@ class CategoryViewController_iPad: UIViewController,
     
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(true)
-        getMediaCategories()
+        categories = ModelBuilder.sharedInstance.getCategories()
+        collectionView.reloadData()
+        //getMediaCategories()
         startSlideShow()
     }
     
@@ -44,12 +46,12 @@ class CategoryViewController_iPad: UIViewController,
         stopSlideShow()
     }
     
-    func getMediaCategories() {
-        let realm = try! Realm()
-        
-        categories = realm.objects(MediaCategory).sorted("id")
-        collectionView.reloadData()
-    }
+//    func getMediaCategories() {
+//        let realm = try! Realm()
+//        
+//        categories = realm.objects(MediaCategory).sorted("id")
+//        collectionView.reloadData()
+//    }
     
     
     func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
@@ -98,18 +100,13 @@ class CategoryViewController_iPad: UIViewController,
             }
             slideshowTimer = nil
         }
-        //print("Slideshow Timer killed")
     }
     
     func advanceSlideShow() {
         
-        
-        
         if slideCounter == self.images.count {
             slideCounter = 0
         }
-        
-        print("count = \(slideCounter)")
         
         let nextImage:UIImage = self.images[slideCounter]
         

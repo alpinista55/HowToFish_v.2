@@ -354,6 +354,9 @@
                                     <segue destination="Jn4-c8-u6I" kind="embed" id="8bl-ez-tVZ"/>
                                 </connections>
                             </containerView>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SelectAVideoBelow" translatesAutoresizingMaskIntoConstraints="NO" id="Lu4-m1-crj">
+                                <rect key="frame" x="0.0" y="44" width="1024" height="576"/>
+                            </imageView>
                             <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="us6-pD-QtD">
                                 <rect key="frame" x="48" y="653" width="928" height="115"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
@@ -448,16 +451,18 @@
                             <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tWE-Ty-apz">
                                 <rect key="frame" x="491" y="700" width="42" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
+                            <constraint firstAttribute="trailing" secondItem="Lu4-m1-crj" secondAttribute="trailing" id="39v-oL-Lga"/>
                             <constraint firstAttribute="trailing" secondItem="0qB-nP-fhg" secondAttribute="trailing" id="9VZ-y9-Okx"/>
                             <constraint firstAttribute="trailing" secondItem="us6-pD-QtD" secondAttribute="trailing" constant="48" id="BDv-54-wXB"/>
                             <constraint firstItem="us6-pD-QtD" firstAttribute="leading" secondItem="tRZ-ge-HyO" secondAttribute="trailing" constant="20" id="CqQ-RN-rFT"/>
                             <constraint firstItem="EFb-CW-fqY" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" id="Fxm-mX-eeD"/>
+                            <constraint firstItem="Lu4-m1-crj" firstAttribute="top" secondItem="IDE-Yg-N7L" secondAttribute="bottom" id="IQf-wO-KGP"/>
                             <constraint firstAttribute="trailing" secondItem="EFb-CW-fqY" secondAttribute="trailing" id="MWq-Tn-rBl"/>
                             <constraint firstItem="0qB-nP-fhg" firstAttribute="top" secondItem="t3c-bH-htB" secondAttribute="bottom" id="Pbp-82-q0Q"/>
                             <constraint firstItem="us6-pD-QtD" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" constant="48" id="QVj-Ug-gJo"/>
@@ -468,9 +473,11 @@
                             <constraint firstAttribute="bottom" secondItem="us6-pD-QtD" secondAttribute="bottom" id="aO6-Ll-EuC"/>
                             <constraint firstItem="tRZ-ge-HyO" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" constant="19" id="awU-Uq-teY"/>
                             <constraint firstItem="tWE-Ty-apz" firstAttribute="centerY" secondItem="us6-pD-QtD" secondAttribute="centerY" id="biF-eo-qIM"/>
+                            <constraint firstItem="EFb-CW-fqY" firstAttribute="top" secondItem="Lu4-m1-crj" secondAttribute="bottom" id="ge7-yk-Ee6"/>
                             <constraint firstItem="Vvg-lr-XjD" firstAttribute="centerY" secondItem="us6-pD-QtD" secondAttribute="centerY" id="gmB-Yi-WrL"/>
                             <constraint firstItem="EFb-CW-fqY" firstAttribute="top" secondItem="t3c-bH-htB" secondAttribute="bottom" id="h5i-wK-epp"/>
                             <constraint firstItem="t3c-bH-htB" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" id="iZK-Cz-fIQ"/>
+                            <constraint firstItem="Lu4-m1-crj" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" id="kE3-72-FEz"/>
                             <constraint firstItem="us6-pD-QtD" firstAttribute="top" secondItem="0qB-nP-fhg" secondAttribute="bottom" id="m5K-Sv-VtB"/>
                             <constraint firstItem="0qB-nP-fhg" firstAttribute="leading" secondItem="Kwq-dj-Lp6" secondAttribute="leading" id="ntc-kN-cwu"/>
                             <constraint firstAttribute="trailing" secondItem="t3c-bH-htB" secondAttribute="trailing" id="ujs-gZ-ly9"/>
@@ -492,6 +499,7 @@
                         </barButtonItem>
                     </navigationItem>
                     <connections>
+                        <outlet property="backgroundImageView" destination="Lu4-m1-crj" id="x7i-GB-bJ5"/>
                         <outlet property="basicsButton" destination="mm9-0g-fAg" id="fcl-au-3VH"/>
                         <outlet property="collectionView" destination="us6-pD-QtD" id="BDh-HK-EPK"/>
                         <outlet property="favAndRecentsMessageLable" destination="tWE-Ty-apz" id="XK9-3d-5sA"/>
@@ -520,18 +528,7 @@
                     <view key="view" contentMode="scaleToFill" id="1tq-P0-7Re">
                         <rect key="frame" x="0.0" y="0.0" width="1024" height="576"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SelectAVideoBelow" translatesAutoresizingMaskIntoConstraints="NO" id="yJd-Zd-YuF">
-                                <rect key="frame" x="0.0" y="0.0" width="1024" height="576"/>
-                            </imageView>
-                        </subviews>
                         <color key="backgroundColor" red="1" green="0.80000001190000003" blue="0.60000002379999995" alpha="1" colorSpace="deviceRGB"/>
-                        <constraints>
-                            <constraint firstAttribute="trailing" secondItem="yJd-Zd-YuF" secondAttribute="trailing" id="Bbh-mh-EPh"/>
-                            <constraint firstItem="yJd-Zd-YuF" firstAttribute="top" secondItem="dTx-EC-ina" secondAttribute="bottom" id="JJd-FI-aOh"/>
-                            <constraint firstItem="yJd-Zd-YuF" firstAttribute="leading" secondItem="1tq-P0-7Re" secondAttribute="leading" id="Sj0-0x-C3m"/>
-                            <constraint firstItem="iUH-to-3A5" firstAttribute="top" secondItem="yJd-Zd-YuF" secondAttribute="bottom" id="lXa-0B-H1n"/>
-                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="fby-4X-4Hx" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -541,7 +538,7 @@
         <!--MENU-->
         <scene sceneID="mUV-gA-ttP">
             <objects>
-                <tableViewController id="Xc0-9t-6gr" customClass="MenuViewController_iPad" customModule="HowToFish" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController id="Xc0-9t-6gr" customClass="MenuTableViewController_iPad" customModule="HowToFish" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="static" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" id="R5d-K7-BdW">
                         <rect key="frame" x="0.0" y="64" width="300" height="336"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -652,10 +649,10 @@
             </objects>
             <point key="canvasLocation" x="1864" y="1503"/>
         </scene>
-        <!--iPad Navigation Controller-->
+        <!--Navigation Controller-->
         <scene sceneID="nub-hN-OPw">
             <objects>
-                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="i5c-4O-B19" customClass="iPadNavigationController" customModule="HowToFish" customModuleProvider="target" sceneMemberID="viewController">
+                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="i5c-4O-B19" customClass="CSC_NavigationController" customModule="HowToFish" customModuleProvider="target" sceneMemberID="viewController">
                     <extendedEdge key="edgesForExtendedLayout"/>
                     <toolbarItems/>
                     <simulatedOrientationMetrics key="simulatedOrientationMetrics" orientation="landscapeRight"/>
@@ -685,6 +682,6 @@
         <image name="SplashImage_01_iPad" width="1024" height="572"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="Avz-IO-t3F"/>
+        <segue reference="Hlv-Jb-9Is"/>
     </inferredMetricsTieBreakers>
 </document>

@@ -9,9 +9,10 @@
 import Foundation
 import SafariServices
 
-class iPadNavigationController: UINavigationController, SFSafariViewControllerDelegate {
+class CSC_NavigationController: UINavigationController, SFSafariViewControllerDelegate {
     
     override func viewDidLoad() {
+        
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "shopPFG:", name: "kUserDidSelectShopPFG", object: nil)
     }
     

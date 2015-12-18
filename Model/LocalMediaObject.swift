@@ -24,7 +24,6 @@ class LocalMediaObject: Object {
     dynamic var series: String?
     
     dynamic var spokesPerson: String?
-    var tags: List<PFGTag>?
     dynamic var thumbURL: String?
     dynamic var title: String?
     dynamic var url: String?

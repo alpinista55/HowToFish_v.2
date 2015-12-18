@@ -11,7 +11,10 @@ import RealmSwift
 
 class SettingsViewController: UIViewController {
     
-    @IBOutlet weak var recentLimitTextField: UITextField!
+    // UI
+    
+    @IBOutlet weak var cacheLimitLabel: UILabel!
+    @IBOutlet weak var cacheLimitSlider: UISlider!
     @IBOutlet weak var recentFileSizeLabel: UILabel!
     @IBOutlet weak var favoritesFileSizeLabel: UILabel!
     @IBOutlet weak var clearFavoritesButton: UIButton!
@@ -19,13 +22,14 @@ class SettingsViewController: UIViewController {
     var menuButton: UIBarButtonItem?
     var homeButton: UIBarButtonItem?
     
+    // Realm
     var recents: Results<LocalMediaObject>!
     var favorites: Results<LocalMediaObject>!
     let documentsUrl =  NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL!
-    
     let realm = try!  Realm()
     
     var isPopOver: Bool = false
+    var cacheLimitHasChanged: Bool = false
     
     override func viewDidLoad() {
         
@@ -67,6 +71,18 @@ class SettingsViewController: UIViewController {
             self.view.addGestureRecognizer(self.revealViewController().panGestureRecognizer())
         }
         favoritesFileSizeLabel.text = fileSizeString
+        
+        let cacheLimit = NSUserDefaults.standardUserDefaults().integerForKey("kCacheLimit")
+        cacheLimitLabel.text = String(cacheLimit)
+        cacheLimitSlider.value = Float(cacheLimit)
+    }
+    
+    override func viewDidDisappear(animated: Bool) {
+        super.viewDidDisappear(true)
+        if cacheLimitHasChanged {
+            NSUserDefaults.standardUserDefaults().setFloat(cacheLimitSlider.value, forKey: "kCacheLimit")
+            NSUserDefaults.standardUserDefaults().synchronize()
+        }
     }
     
     @IBAction func clearRecent(sender: AnyObject) {
@@ -109,6 +125,14 @@ class SettingsViewController: UIViewController {
         }
     }
     
+
+    @IBAction func cacheLimitSliderValueChanged(sender: AnyObject) {
+        let slider: UISlider = sender as! UISlider
+        let roundedValue = round(slider.value)
+        cacheLimitLabel.text = String(Int(roundedValue))
+        slider.value = roundedValue
+        cacheLimitHasChanged = true
+    }
     
     @IBAction func goHome(sender: AnyObject) {
         self.navigationController?.popToRootViewControllerAnimated(true)
